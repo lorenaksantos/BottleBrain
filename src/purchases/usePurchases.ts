@@ -18,7 +18,7 @@ import {
   checkAdsRemoved,
   purchaseRemoveAds,
   restorePurchases,
-} from './purchases.stub';
+} from './purchases';
 
 import { usePlayerProgress } from '../storage/usePlayerProgress';
 import { trackRemoveAdsTapped } from '../analytics/analytics';

@@ -42,14 +42,14 @@ export default {
     // AdMob is currently stubbed out and doesn't need native linking.
     // Add it back here when you're ready to activate real ads:
     //
-    // plugins: [
-    //   [
-    //     'react-native-google-mobile-ads',
-    //     {
-    //       androidAppId: 'YOUR_REAL_ANDROID_APP_ID',
+     plugins: [
+       [
+         'react-native-google-mobile-ads',
+         {
+           androidAppId: 'ca-app-pub-2302538161039810~9589779703',
     //       iosAppId: 'YOUR_REAL_IOS_APP_ID',
-    //     },
-    //   ],
-    // ],
+         },
+       ],
+     ],
   },
 };
