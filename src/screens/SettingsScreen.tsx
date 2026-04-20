@@ -1,18 +1,20 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as React from 'react';
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
-
+import useRateApp from '../hooks/useRateApp';
 import type { RootStackParamList } from '../navigation/types';
 import { resetProgress } from '../storage/progress';
 import { usePurchases } from '../purchases/usePurchases';
 
-// ✏️ Update this URL once you've published to GitHub Pages
+
+
 const PRIVACY_POLICY_URL = 'https://lorenaksantos.github.io/bottlebrain/privacy-policy';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen(_: Props) {
   const { adsRemoved, status, buy, restore } = usePurchases();
+  const { rateFromSettings } = useRateApp();
   const isLoading = status === 'loading';
 
   const onBuyRemoveAds = React.useCallback(() => {
@@ -78,8 +80,7 @@ export function SettingsScreen(_: Props) {
             <View
               style={{
                 backgroundColor: 'rgba(76,175,125,0.12)',
-                borderRadius: 10,
-                padding: 10,
+                borderRadius: 10, padding: 10,
               }}
             >
               <Text style={{ color: '#2e7d52', fontWeight: '700', fontSize: 13 }}>
@@ -108,6 +109,15 @@ export function SettingsScreen(_: Props) {
               )}
             </>
           )}
+        </Card>
+
+        {/* Rate the app card */}
+        <Card>
+          <CardTitle>Enjoying the game?</CardTitle>
+          <CardSubtitle>
+            A quick rating helps other puzzle lovers find Bottle Brain.
+          </CardSubtitle>
+          <Button title="⭐ Rate Bottle Brain" onPress={rateFromSettings} />
         </Card>
 
         {/* Progress card */}
@@ -143,7 +153,6 @@ export function SettingsScreen(_: Props) {
 
       </View>
 
-      {/* App version at the bottom */}
       <Text style={{ textAlign: 'center', fontSize: 12, color: '#9e97b8', fontWeight: '600' }}>
         Bottle Brain v1.0.0
       </Text>

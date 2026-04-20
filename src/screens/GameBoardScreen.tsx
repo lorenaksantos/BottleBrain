@@ -8,9 +8,11 @@ import { useBottleBrainGame } from '../game/useBottleBrainGame';
 import { useBottleLayout } from '../ui/useBottleLayout';
 import { usePlayerProgress } from '../storage/usePlayerProgress';
 import { useSounds } from '../hooks/useSounds';
+import useRateApp from '../hooks/useRateApp';
 import { BottleView } from '../ui/BottleView';
 import { LevelCompleteModal } from '../ui/LevelCompleteModal';
 import { SkipLevelModal } from '../ui/SkipLevelModal';
+import { RateAppModal } from '../ui/RateAppModal';
 import { AdMobBanner } from '../ui/AdMobBanner';
 import {
   trackLevelStarted,
@@ -22,20 +24,26 @@ import {
   trackRemoveAdsTapped,
 } from '../analytics/analytics';
 
+
+
+
+
 type Props = NativeStackScreenProps<RootStackParamList, 'GameBoard'>;
 
 const TOTAL_LEVELS = getTotalLevels();
 
 export function GameBoardScreen({ route, navigation }: Props) {
   const { progress, isLoaded, solveLevel, skipLevel } = usePlayerProgress();
-  const level      = route.params?.level ?? progress.currentLevel ?? 1;
-  const adsRemoved = progress.adsRemoved ?? false;
+  const level       = route.params?.level ?? progress.currentLevel ?? 1;
+  const adsRemoved  = progress.adsRemoved ?? false;
   const isLastLevel = level >= TOTAL_LEVELS;
 
   const [skipModalVisible, setSkipModalVisible] = React.useState(false);
 
   const movesMadeRef = React.useRef(0);
   const hasWonRef    = React.useRef(false);
+
+  const { showPrompt, checkAutoPrompt, rateNow, dismiss } = useRateApp();
 
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: `Level ${level}` });
@@ -47,7 +55,6 @@ export function GameBoardScreen({ route, navigation }: Props) {
     trackLevelStarted(level);
   }, [level]);
 
-  // Track abandon on unmount
   React.useEffect(() => {
     return () => {
       if (!hasWonRef.current) {
@@ -77,10 +84,12 @@ export function GameBoardScreen({ route, navigation }: Props) {
 
   const layout = useBottleLayout(game.board.length);
 
+  // When player wins — persist + track + check rate prompt
   React.useEffect(() => {
     if (!game.hasWon || !isLoaded) return;
     trackLevelCompleted(level, movesMadeRef.current);
     solveLevel(level).catch(() => {});
+    checkAutoPrompt(level); // triggers rate modal if level === 5
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.hasWon]);
 
@@ -89,13 +98,9 @@ export function GameBoardScreen({ route, navigation }: Props) {
     [navigation],
   );
 
-  // After level 50: go back to level 1
   const onNextLevel = React.useCallback(() => {
-    if (isLastLevel) {
-      goToLevel(1);
-    } else {
-      goToLevel(level + 1);
-    }
+    if (isLastLevel) goToLevel(1);
+    else goToLevel(level + 1);
   }, [level, isLastLevel, goToLevel]);
 
   const onReplay = React.useCallback(() => {
@@ -116,11 +121,8 @@ export function GameBoardScreen({ route, navigation }: Props) {
   }, [level, skipLevel, goToLevel]);
 
   const onSkipDismiss = React.useCallback((watchedAd: boolean) => {
-    if (watchedAd) {
-      trackSkipAdResult(level, false);
-    } else {
-      trackSkipDismissed(level);
-    }
+    if (watchedAd) trackSkipAdResult(level, false);
+    else trackSkipDismissed(level);
     setSkipModalVisible(false);
   }, [level]);
 
@@ -175,7 +177,6 @@ export function GameBoardScreen({ route, navigation }: Props) {
             Tap a bottle, then tap a destination.
           </Text>
           <TopBarButton onPress={onReplay} label="Replay" />
-          {/* No skip on level 1 or the last level */}
           {level > 1 && !isLastLevel && (
             <TopBarButton onPress={onSkipButtonPress} label="Skip" accent />
           )}
@@ -231,6 +232,13 @@ export function GameBoardScreen({ route, navigation }: Props) {
           onDismiss={onSkipDismiss}
           onRemoveAdsTapped={onRemoveAdsTapped}
         />
+
+        {/* Rate prompt — shown once after level 5 */}
+        <RateAppModal
+          visible={showPrompt}
+          onRateNow={rateNow}
+          onDismiss={dismiss}
+        />
       </View>
 
       {showBanner ? (
@@ -243,9 +251,7 @@ export function GameBoardScreen({ route, navigation }: Props) {
 }
 
 function TopBarButton({
-  label,
-  onPress,
-  accent = false,
+  label, onPress, accent = false,
 }: {
   label: string;
   onPress: () => void;
