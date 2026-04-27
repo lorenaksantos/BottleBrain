@@ -9,11 +9,8 @@ import { LevelMapScreen }  from './src/screens/LevelMapScreen';
 import { GameBoardScreen } from './src/screens/GameBoardScreen';
 import { SettingsScreen }  from './src/screens/SettingsScreen';
 import type { RootStackParamList } from './src/navigation/types';
-import {
-  initAnalytics,
-  trackAppOpened,
-  trackSessionEnded,
-} from './src/analytics/analytics';
+import { initAnalytics, trackAppOpened, trackSessionEnded } from './src/analytics/analytics';
+import { loadSavedLanguage } from './src/i18n/i18n';
 
 export default function App() {
   const Stack = React.useMemo(
@@ -24,12 +21,12 @@ export default function App() {
   const sessionStartRef = React.useRef<number>(Date.now());
 
   React.useEffect(() => {
-    // Init analytics
-    initAnalytics().then(() => {
-      trackAppOpened();
-    });
+    // Load saved language preference first
+    loadSavedLanguage().catch(() => {});
 
-    // Track session length
+    // Init analytics
+    initAnalytics().then(() => trackAppOpened());
+
     const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
       if (state === 'background' || state === 'inactive') {
         const seconds = Math.round((Date.now() - sessionStartRef.current) / 1000);
@@ -64,4 +61,3 @@ export default function App() {
     </NavigationContainer>
   );
 }
-

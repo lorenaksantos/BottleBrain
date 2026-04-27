@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
+import useTranslation from '../i18n/i18n';
 
 export function LevelCompleteModal({
   visible,
@@ -14,6 +15,8 @@ export function LevelCompleteModal({
   movesMade: number;
   isLastLevel: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View
@@ -38,10 +41,9 @@ export function LevelCompleteModal({
           }}
         >
           <Text style={{ fontSize: 22, fontWeight: '800', color: '#2b1a66' }}>
-            Level Complete! 🎉
+            {t('level_complete')}
           </Text>
 
-          {/* Moves counter — compact, not intrusive */}
           {movesMade > 0 && (
             <View
               style={{
@@ -57,24 +59,25 @@ export function LevelCompleteModal({
             >
               <Text style={{ fontSize: 16 }}>🧠</Text>
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#4a3b7a' }}>
-                Solved in {movesMade} {movesMade === 1 ? 'move' : 'moves'}
+                {t('solved_in', {
+                  moves: movesMade,
+                  unit: t(movesMade === 1 ? 'move' : 'moves'),
+                })}
               </Text>
             </View>
           )}
 
           <Text style={{ fontSize: 14, color: '#4a3b7a', marginTop: 2 }}>
-            {isLastLevel
-              ? 'You completed all 50 levels. Impressive!'
-              : 'Nice work. Ready for the next challenge?'}
+            {isLastLevel ? t('all_levels_complete') : t('nice_work')}
           </Text>
 
+          {/* Replay LEFT, Next Level RIGHT */}
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 6 }}>
-            {isLastLevel ? (
-              <PrimaryButton title="Play Again from Level 1" onPress={onNextLevel} />
-            ) : (
-              <PrimaryButton title="Next Level →" onPress={onNextLevel} />
-            )}
-            <SecondaryButton title="Replay" onPress={onReplay} />
+            <SecondaryButton title={t('replay')} onPress={onReplay} />
+            <PrimaryButton
+              title={isLastLevel ? t('play_again') : t('next_level')}
+              onPress={onNextLevel}
+            />
           </View>
         </View>
       </View>
@@ -87,9 +90,7 @@ function PrimaryButton({ title, onPress }: { title: string; onPress: () => void 
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 14,
+        flex: 1, paddingVertical: 12, borderRadius: 14,
         backgroundColor: pressed ? '#6d4bff' : '#7a5cff',
         alignItems: 'center',
       })}
@@ -104,12 +105,9 @@ function SecondaryButton({ title, onPress }: { title: string; onPress: () => voi
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 14,
+        flex: 1, paddingVertical: 12, borderRadius: 14,
         backgroundColor: pressed ? 'rgba(122,92,255,0.10)' : 'rgba(122,92,255,0.06)',
-        borderWidth: 1,
-        borderColor: 'rgba(122,92,255,0.35)',
+        borderWidth: 1, borderColor: 'rgba(122,92,255,0.35)',
         alignItems: 'center',
       })}
     >

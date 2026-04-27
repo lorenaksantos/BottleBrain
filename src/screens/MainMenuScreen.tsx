@@ -4,16 +4,17 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { RootStackParamList } from '../navigation/types';
 import { usePlayerProgress } from '../storage/usePlayerProgress';
+import useTranslation from '../i18n/i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MainMenu'>;
 
 export function MainMenuScreen({ navigation }: Props) {
   const { progress, isLoaded } = usePlayerProgress();
+  const { t } = useTranslation();
   const level = isLoaded ? progress.currentLevel : 1;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F6F0FF', padding: 18 }}>
-      {/* Background glows */}
       <View
         pointerEvents="none"
         style={{
@@ -36,33 +37,27 @@ export function MainMenuScreen({ navigation }: Props) {
           style={{
             backgroundColor: 'rgba(255,255,255,0.45)',
             borderColor: 'rgba(255,255,255,0.65)',
-            borderWidth: 1,
-            borderRadius: 24,
-            padding: 18,
+            borderWidth: 1, borderRadius: 24, padding: 18,
           }}
         >
           <Text style={{ fontSize: 32, fontWeight: '900', color: '#2b1a66' }}>
-            Bottle Brain
+            {t('app_name')}
           </Text>
           <Text style={{ marginTop: 8, fontSize: 14, color: '#4a3b7a', fontWeight: '600' }}>
-            A cozy color-sorting puzzle.
+            {t('tagline')}
           </Text>
 
           <View style={{ marginTop: 18, gap: 10 }}>
-            {/* Continue / start playing at current level */}
             <PrimaryButton
-              title={`Play — Level ${level}`}
+              title={t('play_level', { level })}
               onPress={() => navigation.navigate('GameBoard', { level })}
             />
-
-            {/* Browse all 50 levels */}
             <SecondaryButton
-              title="All Levels"
+              title={t('all_levels')}
               onPress={() => navigation.navigate('LevelMap')}
             />
-
             <SecondaryButton
-              title="Settings"
+              title={t('settings')}
               onPress={() => navigation.navigate('Settings')}
             />
           </View>
@@ -77,8 +72,7 @@ function PrimaryButton({ title, onPress }: { title: string; onPress: () => void 
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        paddingVertical: 14,
-        borderRadius: 16,
+        paddingVertical: 14, borderRadius: 16,
         backgroundColor: pressed ? '#6d4bff' : '#7a5cff',
         alignItems: 'center',
       })}
@@ -93,11 +87,9 @@ function SecondaryButton({ title, onPress }: { title: string; onPress: () => voi
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        paddingVertical: 14,
-        borderRadius: 16,
+        paddingVertical: 14, borderRadius: 16,
         backgroundColor: pressed ? 'rgba(122,92,255,0.10)' : 'rgba(122,92,255,0.06)',
-        borderWidth: 1,
-        borderColor: 'rgba(122,92,255,0.35)',
+        borderWidth: 1, borderColor: 'rgba(122,92,255,0.35)',
         alignItems: 'center',
       })}
     >

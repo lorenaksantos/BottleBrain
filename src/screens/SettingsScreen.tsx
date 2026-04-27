@@ -1,12 +1,17 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as React from 'react';
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
-import useRateApp from '../hooks/useRateApp';
+
 import type { RootStackParamList } from '../navigation/types';
 import { resetProgress } from '../storage/progress';
 import { usePurchases } from '../purchases/usePurchases';
-
-
+import useRateApp from '../hooks/useRateApp';
+import useTranslation, {
+  SUPPORTED_LANGUAGES,
+  type Language,
+  setLanguage,
+  getLanguage,
+} from '../i18n/i18n';
 
 const PRIVACY_POLICY_URL = 'https://lorenaksantos.github.io/bottlebrain/privacy-policy';
 
@@ -15,7 +20,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 export function SettingsScreen(_: Props) {
   const { adsRemoved, status, buy, restore } = usePurchases();
   const { rateFromSettings } = useRateApp();
+  const { t } = useTranslation();
   const isLoading = status === 'loading';
+  const [selectedLang, setSelectedLang] = React.useState<Language>(getLanguage());
 
   const onBuyRemoveAds = React.useCallback(() => {
     buy('settings').catch(() => {});
@@ -26,34 +33,38 @@ export function SettingsScreen(_: Props) {
   }, [restore]);
 
   const onReset = React.useCallback(() => {
-    Alert.alert('Reset Progress', 'This will reset your current level and unlocks.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('reset_title'), t('reset_message'), [
+      { text: t('cancel'), style: 'cancel' },
       {
-        text: 'Reset',
+        text: t('reset'),
         style: 'destructive',
         onPress: () => { resetProgress().catch(() => {}); },
       },
     ]);
-  }, []);
+  }, [t]);
 
   const onPrivacyPolicy = React.useCallback(() => {
     Linking.openURL(PRIVACY_POLICY_URL).catch(() => {
-      Alert.alert('Could not open link', 'Please visit: ' + PRIVACY_POLICY_URL);
+      Alert.alert('Could not open link', PRIVACY_POLICY_URL);
     });
+  }, []);
+
+  const onSelectLanguage = React.useCallback(async (lang: Language) => {
+    setSelectedLang(lang);
+    await setLanguage(lang);
   }, []);
 
   const statusMessage = React.useMemo(() => {
     switch (status) {
-      case 'success':   return '✓ Purchase successful!';
-      case 'error':     return 'Something went wrong. Please try again.';
-      case 'cancelled': return 'Purchase cancelled.';
+      case 'success':   return t('purchase_success');
+      case 'error':     return t('purchase_error');
+      case 'cancelled': return t('purchase_cancelled');
       default:          return null;
     }
-  }, [status]);
+  }, [status, t]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F6F0FF', padding: 18, gap: 12 }}>
-      {/* Background glows */}
       <View
         pointerEvents="none"
         style={{
@@ -73,37 +84,62 @@ export function SettingsScreen(_: Props) {
 
       <View style={{ flex: 1, gap: 12 }}>
 
-        {/* Remove Ads card */}
+        {/* Language picker */}
         <Card>
-          <CardTitle>Remove Ads</CardTitle>
+          <CardTitle>{t('language')}</CardTitle>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <Pressable
+                key={lang.code}
+                onPress={() => onSelectLanguage(lang.code)}
+                style={({ pressed }) => ({
+                  paddingVertical: 8,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor:
+                    selectedLang === lang.code
+                      ? '#7a5cff'
+                      : pressed ? 'rgba(122,92,255,0.10)' : 'rgba(122,92,255,0.06)',
+                  borderWidth: 1,
+                  borderColor:
+                    selectedLang === lang.code ? '#5a3de0' : 'rgba(122,92,255,0.35)',
+                })}
+              >
+                <Text
+                  style={{
+                    fontWeight: '800', fontSize: 13,
+                    color: selectedLang === lang.code ? '#fff' : '#2b1a66',
+                  }}
+                >
+                  {lang.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Card>
+
+        {/* Remove Ads */}
+        <Card>
+          <CardTitle>{t('remove_ads')}</CardTitle>
           {adsRemoved ? (
-            <View
-              style={{
-                backgroundColor: 'rgba(76,175,125,0.12)',
-                borderRadius: 10, padding: 10,
-              }}
-            >
+            <View style={{ backgroundColor: 'rgba(76,175,125,0.12)', borderRadius: 10, padding: 10 }}>
               <Text style={{ color: '#2e7d52', fontWeight: '700', fontSize: 13 }}>
-                ✓ Ads removed — thank you for supporting Bottle Brain!
+                {t('remove_ads_active')}
               </Text>
             </View>
           ) : (
             <>
-              <CardSubtitle>
-                Enjoy Bottle Brain without any ads for $1.99/month.
-              </CardSubtitle>
+              <CardSubtitle>{t('remove_ads_subtitle')}</CardSubtitle>
               <Button
-                title={isLoading ? 'Processing...' : 'Remove Ads — $1.99/month'}
+                title={isLoading ? t('processing') : t('remove_ads_price')}
                 onPress={onBuyRemoveAds}
                 disabled={isLoading}
               />
               {statusMessage && (
-                <Text
-                  style={{
-                    fontSize: 12, fontWeight: '600', marginTop: 2,
-                    color: status === 'success' ? '#2e7d52' : '#b42318',
-                  }}
-                >
+                <Text style={{
+                  fontSize: 12, fontWeight: '600', marginTop: 2,
+                  color: status === 'success' ? '#2e7d52' : '#b42318',
+                }}>
                   {statusMessage}
                 </Text>
               )}
@@ -111,50 +147,46 @@ export function SettingsScreen(_: Props) {
           )}
         </Card>
 
-        {/* Rate the app card */}
+        {/* Rate */}
         <Card>
-          <CardTitle>Enjoying the game?</CardTitle>
-          <CardSubtitle>
-            A quick rating helps other puzzle lovers find Bottle Brain.
-          </CardSubtitle>
-          <Button title="⭐ Rate Bottle Brain" onPress={rateFromSettings} />
+          <CardTitle>{t('enjoying')}</CardTitle>
+          <CardSubtitle>{t('rate_subtitle')}</CardSubtitle>
+          <Button title={t('rate_button')} onPress={rateFromSettings} />
         </Card>
 
-        {/* Progress card */}
+        {/* Progress */}
         <Card>
-          <CardTitle>Progress</CardTitle>
-          <CardSubtitle>Reset your saved levels and start fresh.</CardSubtitle>
-          <Button title="Reset Progress" onPress={onReset} variant="danger" />
+          <CardTitle>{t('progress')}</CardTitle>
+          <CardSubtitle>{t('progress_subtitle')}</CardSubtitle>
+          <Button title={t('reset_progress')} onPress={onReset} variant="danger" />
         </Card>
 
-        {/* Restore card */}
+        {/* Restore */}
         <Card>
-          <CardTitle>Purchases</CardTitle>
-          <CardSubtitle>
-            Already subscribed on another device? Restore it here.
-          </CardSubtitle>
+          <CardTitle>{t('purchases')}</CardTitle>
+          <CardSubtitle>{t('restore_subtitle')}</CardSubtitle>
           <Button
-            title={isLoading ? 'Restoring...' : 'Restore Purchase'}
+            title={isLoading ? t('restoring') : t('restore_purchase')}
             onPress={onRestore}
             disabled={isLoading}
           />
           {status === 'error' && (
             <Text style={{ fontSize: 12, fontWeight: '600', color: '#b42318', marginTop: 2 }}>
-              No active subscription found.
+              {t('no_subscription')}
             </Text>
           )}
         </Card>
 
-        {/* Legal card */}
+        {/* Legal */}
         <Card>
-          <CardTitle>Legal</CardTitle>
-          <Button title="Privacy Policy" onPress={onPrivacyPolicy} />
+          <CardTitle>{t('legal')}</CardTitle>
+          <Button title={t('privacy_policy')} onPress={onPrivacyPolicy} />
         </Card>
 
       </View>
 
       <Text style={{ textAlign: 'center', fontSize: 12, color: '#9e97b8', fontWeight: '600' }}>
-        Bottle Brain v1.0.0
+        {t('version')}
       </Text>
     </View>
   );
@@ -162,41 +194,26 @@ export function SettingsScreen(_: Props) {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <View
-      style={{
-        backgroundColor: 'rgba(255,255,255,0.45)',
-        borderColor: 'rgba(255,255,255,0.65)',
-        borderWidth: 1, borderRadius: 18, padding: 14, gap: 8,
-      }}
-    >
+    <View style={{
+      backgroundColor: 'rgba(255,255,255,0.45)',
+      borderColor: 'rgba(255,255,255,0.65)',
+      borderWidth: 1, borderRadius: 18, padding: 14, gap: 8,
+    }}>
       {children}
     </View>
   );
 }
 
 function CardTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <Text style={{ fontSize: 18, fontWeight: '900', color: '#2b1a66' }}>
-      {children}
-    </Text>
-  );
+  return <Text style={{ fontSize: 18, fontWeight: '900', color: '#2b1a66' }}>{children}</Text>;
 }
 
 function CardSubtitle({ children }: { children: React.ReactNode }) {
-  return (
-    <Text style={{ fontSize: 13, fontWeight: '600', color: '#4a3b7a' }}>
-      {children}
-    </Text>
-  );
+  return <Text style={{ fontSize: 13, fontWeight: '600', color: '#4a3b7a' }}>{children}</Text>;
 }
 
-function Button({
-  title, onPress, variant, disabled,
-}: {
-  title: string;
-  onPress: () => void;
-  variant?: 'danger';
-  disabled?: boolean;
+function Button({ title, onPress, variant, disabled }: {
+  title: string; onPress: () => void; variant?: 'danger'; disabled?: boolean;
 }) {
   const isDanger = variant === 'danger';
   return (
@@ -214,9 +231,7 @@ function Button({
         alignItems: 'center',
       })}
     >
-      <Text style={{ fontWeight: '900', color: isDanger ? '#b42318' : '#2b1a66' }}>
-        {title}
-      </Text>
+      <Text style={{ fontWeight: '900', color: isDanger ? '#b42318' : '#2b1a66' }}>{title}</Text>
     </Pressable>
   );
 }

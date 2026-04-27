@@ -14,6 +14,7 @@ import { LevelCompleteModal } from '../ui/LevelCompleteModal';
 import { SkipLevelModal } from '../ui/SkipLevelModal';
 import { RateAppModal } from '../ui/RateAppModal';
 import { AdMobBanner } from '../ui/AdMobBanner';
+import useTranslation from '../i18n/i18n';
 import {
   trackLevelStarted,
   trackLevelAbandoned,
@@ -24,10 +25,6 @@ import {
   trackRemoveAdsTapped,
 } from '../analytics/analytics';
 
-
-
-
-
 type Props = NativeStackScreenProps<RootStackParamList, 'GameBoard'>;
 
 const TOTAL_LEVELS = getTotalLevels();
@@ -37,17 +34,16 @@ export function GameBoardScreen({ route, navigation }: Props) {
   const level       = route.params?.level ?? progress.currentLevel ?? 1;
   const adsRemoved  = progress.adsRemoved ?? false;
   const isLastLevel = level >= TOTAL_LEVELS;
+  const { t } = useTranslation();
 
   const [skipModalVisible, setSkipModalVisible] = React.useState(false);
-
   const movesMadeRef = React.useRef(0);
   const hasWonRef    = React.useRef(false);
-
   const { showPrompt, checkAutoPrompt, rateNow, dismiss } = useRateApp();
 
   React.useLayoutEffect(() => {
-    navigation.setOptions({ title: `Level ${level}` });
-  }, [level, navigation]);
+    navigation.setOptions({ title: `${t('app_name')} — ${level}` });
+  }, [level, navigation, t]);
 
   React.useEffect(() => {
     movesMadeRef.current = 0;
@@ -57,9 +53,7 @@ export function GameBoardScreen({ route, navigation }: Props) {
 
   React.useEffect(() => {
     return () => {
-      if (!hasWonRef.current) {
-        trackLevelAbandoned(level, movesMadeRef.current);
-      }
+      if (!hasWonRef.current) trackLevelAbandoned(level, movesMadeRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level]);
@@ -69,27 +63,21 @@ export function GameBoardScreen({ route, navigation }: Props) {
 
   const game = useBottleBrainGame({
     initialBoard,
-    onValidMove: () => {
-      sounds.playMove();
-      movesMadeRef.current += 1;
-    },
+    onValidMove: () => { sounds.playMove(); movesMadeRef.current += 1; },
     onInvalidMove: sounds.playInvalid,
     onSelect:      sounds.playSelect,
     onWin:         sounds.playComplete,
   });
 
-  React.useEffect(() => {
-    hasWonRef.current = game.hasWon;
-  }, [game.hasWon]);
+  React.useEffect(() => { hasWonRef.current = game.hasWon; }, [game.hasWon]);
 
   const layout = useBottleLayout(game.board.length);
 
-  // When player wins — persist + track + check rate prompt
   React.useEffect(() => {
     if (!game.hasWon || !isLoaded) return;
     trackLevelCompleted(level, movesMadeRef.current);
     solveLevel(level).catch(() => {});
-    checkAutoPrompt(level); // triggers rate modal if level === 5
+    checkAutoPrompt(level);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.hasWon]);
 
@@ -135,64 +123,33 @@ export function GameBoardScreen({ route, navigation }: Props) {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F6F0FF' }}>
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute', top: -90, left: -60,
-          width: 260, height: 260, borderRadius: 130,
-          backgroundColor: 'rgba(109, 75, 255, 0.18)',
-        }}
-      />
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute', bottom: -120, right: -80,
-          width: 320, height: 320, borderRadius: 160,
-          backgroundColor: 'rgba(111, 204, 255, 0.18)',
-        }}
-      />
+      <View pointerEvents="none" style={{
+        position: 'absolute', top: -90, left: -60,
+        width: 260, height: 260, borderRadius: 130,
+        backgroundColor: 'rgba(109, 75, 255, 0.18)',
+      }} />
+      <View pointerEvents="none" style={{
+        position: 'absolute', bottom: -120, right: -80,
+        width: 320, height: 320, borderRadius: 160,
+        backgroundColor: 'rgba(111, 204, 255, 0.18)',
+      }} />
 
-      <View
-        style={{
-          flex: 1,
-          paddingTop: 14,
-          paddingHorizontal: 18,
-          paddingBottom: showBanner ? 50 : 14,
-          gap: 12,
-        }}
-      >
-        {/* Top bar */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-          }}
-        >
-          <Text
-            style={{ flex: 1, fontSize: 13, color: '#4a3b7a', fontWeight: '700' }}
-            numberOfLines={1}
-          >
-            Tap a bottle, then tap a destination.
+      <View style={{
+        flex: 1, paddingTop: 14, paddingHorizontal: 18,
+        paddingBottom: showBanner ? 50 : 14, gap: 12,
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <Text style={{ flex: 1, fontSize: 13, color: '#4a3b7a', fontWeight: '700' }} numberOfLines={1}>
+            {t('instruction')}
           </Text>
-          <TopBarButton onPress={onReplay} label="Replay" />
+          <TopBarButton onPress={onReplay} label={t('replay')} />
           {level > 1 && !isLastLevel && (
-            <TopBarButton onPress={onSkipButtonPress} label="Skip" accent />
+            <TopBarButton onPress={onSkipButtonPress} label={t('skip')} accent />
           )}
         </View>
 
-        {/* Game board */}
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: layout.columnGap,
-              justifyContent: 'center',
-              maxWidth: '100%',
-            }}
-          >
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: layout.columnGap, justifyContent: 'center', maxWidth: '100%' }}>
             {game.board.map((bottleColors, idx) => {
               const ids   = game.ballIdBoard[idx] ?? [];
               const balls = bottleColors.map((color, ballIdx) => ({
@@ -233,37 +190,26 @@ export function GameBoardScreen({ route, navigation }: Props) {
           onRemoveAdsTapped={onRemoveAdsTapped}
         />
 
-        {/* Rate prompt — shown once after level 5 */}
-        <RateAppModal
-          visible={showPrompt}
-          onRateNow={rateNow}
-          onDismiss={dismiss}
-        />
+        <RateAppModal visible={showPrompt} onRateNow={rateNow} onDismiss={dismiss} />
       </View>
 
-      {showBanner ? (
+      {showBanner && (
         <View style={{ height: 50, width: '100%', justifyContent: 'center' }}>
           <AdMobBanner />
         </View>
-      ) : null}
+      )}
     </View>
   );
 }
 
-function TopBarButton({
-  label, onPress, accent = false,
-}: {
-  label: string;
-  onPress: () => void;
-  accent?: boolean;
+function TopBarButton({ label, onPress, accent = false }: {
+  label: string; onPress: () => void; accent?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 12,
+        paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12,
         backgroundColor: accent
           ? pressed ? '#6d4bff' : '#7a5cff'
           : pressed ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.35)',
